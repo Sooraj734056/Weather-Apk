@@ -9,24 +9,47 @@ import {
   TouchableOpacity,
   Keyboard,
   ActivityIndicator,
+  RefreshControl,
+  ScrollView,
+  Switch,
+  Alert,
 } from "react-native";
-import { fetchWeather, fetchForecast } from "../services/weatherApi";
-import ForecastItem from "../components/ForecastItem";
+import * as Location from "expo-location"; // ✅ added
+import { fetchWeather, fetchForecast } from "../services/weatherApi.js";
+import ForecastItem from "../components/ForecastItem.js";
+import Autocomplete from "react-native-autocomplete-input";
+
+const citySuggestions = ["New York", "London", "Delhi", "Mumbai", "Tokyo", "Sydney"];
 
 export default function HomeScreen() {
-  const [city, setCity] = useState("New York");
+  const [city, setCity] = useState("");
   const [input, setInput] = useState("");
   const [weather, setWeather] = useState(null);
   const [forecast, setForecast] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [unit, setUnit] = useState("C"); 
+  const [filteredCities, setFilteredCities] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const getWeatherData = async (searchCity) => {
+  const getWeatherData = async (searchCity, lat, lon) => {
     setLoading(true);
     try {
-      const weatherData = await fetchWeather(searchCity);
-      const forecastData = await fetchForecast(searchCity);
+      let weatherData, forecastData;
 
-      if (weatherData && weatherData.main) setWeather(weatherData);
+      if (lat && lon) {
+        // ✅ Location-based weather
+        weatherData = await fetchWeather(null, lat, lon);
+        forecastData = await fetchForecast(null, lat, lon);
+      } else {
+        // ✅ City-based weather
+        weatherData = await fetchWeather(searchCity);
+        forecastData = await fetchForecast(searchCity);
+      }
+
+      if (weatherData && weatherData.main) {
+        setWeather(weatherData);
+        setCity(weatherData.name);
+      }
 
       if (forecastData && forecastData.list) {
         const daily = forecastData.list.filter((item) =>
@@ -36,42 +59,112 @@ export default function HomeScreen() {
       }
     } catch (error) {
       console.log("Error fetching weather:", error);
+      Alert.alert("Error", "Failed to fetch weather data.");
     } finally {
       setLoading(false);
     }
   };
 
+  // ✅ App open hote hi current location ka weather
   useEffect(() => {
-    getWeatherData(city);
+    (async () => {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("Permission required", "Location permission is needed!");
+        return;
+      }
+
+      let location = await Location.getCurrentPositionAsync({});
+      const { latitude, longitude } = location.coords;
+
+      getWeatherData(null, latitude, longitude);
+    })();
   }, []);
 
-  const handleSearch = () => {
-    Keyboard.dismiss();
-    if (!input.trim()) return;
-    setCity(input);
-    getWeatherData(input);
+  const handleSearch = (selectedCity) => {
+    const searchCity = selectedCity || input;
+    if (!searchCity.trim()) return;
+    setCity(searchCity);
+    getWeatherData(searchCity);
     setInput("");
+    setFilteredCities([]);
+    Keyboard.dismiss();
+  };
+
+  const toggleUnit = () => {
+    setUnit(unit === "C" ? "F" : "C");
+  };
+
+  const convertTemp = (tempC) => (unit === "C" ? tempC : tempC * 1.8 + 32);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    if (city) {
+      await getWeatherData(city);
+    }
+    setRefreshing(false);
+  };
+
+  const updateFilteredCities = (text) => {
+    setInput(text);
+    if (text.length > 0) {
+      const filtered = citySuggestions.filter((c) =>
+        c.toLowerCase().includes(text.toLowerCase())
+      );
+      setFilteredCities(filtered);
+    } else {
+      setFilteredCities([]);
+    }
+  };
+
+  const getBackground = () => {
+    if (!weather) return require("../assets/cloud.jpeg");
+    const main = weather.weather[0].main.toLowerCase();
+    if (main.includes("rain")) return require("../assets/rain.gif");
+    if (main.includes("cloud")) return require("../assets/clouds.gif");
+    if (main.includes("clear")) return require("../assets/sunny.gif");
+    if (main.includes("snow")) return require("../assets/snow.gif");
+    return require("../assets/cloud.jpeg");
   };
 
   return (
     <ImageBackground
-      source={require("../assets/cloud.jpeg")}
+      source={getBackground()}
       style={StyleSheet.absoluteFillObject}
       resizeMode="cover"
     >
-      <View style={styles.root}>
+      <ScrollView
+        contentContainerStyle={styles.root}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
         {/* Search */}
         <View style={styles.searchRow}>
-          <TextInput
-            value={input}
-            onChangeText={setInput}
-            placeholder="Enter a City..."
-            style={styles.searchBar}
-            placeholderTextColor="#555"
+          <Autocomplete
+            data={filteredCities}
+            defaultValue={input}
+            onChangeText={updateFilteredCities}
+            placeholder="Enter a city..."
+            flatListProps={{
+              keyExtractor: (_, idx) => idx.toString(),
+              renderItem: ({ item }) => (
+                <TouchableOpacity onPress={() => handleSearch(item)}>
+                  <Text style={styles.suggestion}>{item}</Text>
+                </TouchableOpacity>
+              ),
+            }}
+            inputContainerStyle={styles.searchBar}
+            listContainerStyle={styles.suggestionContainer}
           />
-          <TouchableOpacity onPress={handleSearch} style={styles.searchButton}>
+          <TouchableOpacity onPress={() => handleSearch()} style={styles.searchButton}>
             <Text style={{ color: "white", fontWeight: "bold" }}>Go</Text>
           </TouchableOpacity>
+        </View>
+
+        {/* Unit Switch */}
+        <View style={styles.unitRow}>
+          <Text style={{ color: "white", marginRight: 10 }}>°C</Text>
+          <Switch value={unit === "F"} onValueChange={toggleUnit} />
+          <Text style={{ color: "white", marginLeft: 10 }}>°F</Text>
         </View>
 
         {loading ? (
@@ -84,7 +177,7 @@ export default function HomeScreen() {
               <Text style={styles.today}>Today</Text>
               <Text style={styles.city}>{weather.name}</Text>
               <Text style={styles.temp}>
-                {weather.main.temp.toFixed(0)}°C
+                {convertTemp(weather.main.temp).toFixed(0)}°{unit}
               </Text>
               <Text style={styles.desc}>{weather.weather[0].description}</Text>
             </View>
@@ -96,14 +189,16 @@ export default function HomeScreen() {
               horizontal
               renderItem={({ item }) => {
                 const day = new Date(item.dt_txt).toLocaleDateString("en-US", {
-                  weekday: "long",
+                  weekday: "short",
                 });
                 return (
-                  <ForecastItem
-                    day={day}
-                    temp={item.main.temp.toFixed(0)}
-                    icon="⛅"
-                  />
+               <ForecastItem
+  day={day}
+  temp={convertTemp(item.main.temp).toFixed(0)}
+  main={item.weather[0].main}
+  unit={unit}   // ✅ added
+/>
+
                 );
               }}
               contentContainerStyle={styles.forecastList}
@@ -115,31 +210,39 @@ export default function HomeScreen() {
             No weather data found
           </Text>
         )}
-      </View>
+      </ScrollView>
     </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
   root: {
-    flex: 1,
+    flexGrow: 1,
     alignItems: "center",
     justifyContent: "flex-start",
     paddingTop: 80,
+    paddingBottom: 50,
   },
   searchRow: {
     flexDirection: "row",
     alignItems: "center",
     width: "90%",
-    marginBottom: 20,
+    marginBottom: 10,
   },
   searchBar: {
     flex: 1,
     backgroundColor: "white",
     borderRadius: 25,
     padding: 12,
-    fontSize: 16,
     elevation: 3,
+  },
+  suggestionContainer: {
+    backgroundColor: "white",
+    borderRadius: 8,
+    marginTop: 5,
+  },
+  suggestion: {
+    padding: 8,
   },
   searchButton: {
     backgroundColor: "#007AFF",
@@ -147,6 +250,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 25,
+  },
+  unitRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 10,
   },
   card: {
     width: "90%",

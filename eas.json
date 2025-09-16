@@ -3,12 +3,20 @@
     "version": ">= 3.0.0"
   },
   "build": {
-    "production": {
-      "releaseChannel": "production",
-      "distribution": "store",
+    "preview": {
+      "distribution": "internal",
       "android": {
         "buildType": "apk"
       }
+    },
+    "production": {
+      "distribution": "store",
+      "android": {
+        "buildType": "app-bundle"
+      }
     }
+  },
+  "submit": {
+    "production": {}
   }
 }
