@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 const weatherIcons = {
   Clear: "weather-sunny",
@@ -14,39 +14,36 @@ const weatherIcons = {
   Fog: "weather-fog",
 };
 
-export default function ForecastItem({ day, temp, main, unit = "C" }) {
+export default function ForecastItem({ day, temp, main }) {
   const iconName = weatherIcons[main] || "weather-sunny";
 
   return (
-    <View style={styles.item}>
+    <View style={styles.card}>
       <Text style={styles.day}>{day}</Text>
       <MaterialCommunityIcons name={iconName} size={36} color="#fff" />
-      <Text style={styles.temp}>
-        {temp}°{unit}
-      </Text>
+      <Text style={styles.temp}>{Math.round(temp)}°</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  item: {
-    backgroundColor: "rgba(0,0,0,0.3)",
-    borderRadius: 15,
-    paddingVertical: 15,
-    paddingHorizontal: 10,
-    marginHorizontal: 8,
+  card: {
+    backgroundColor: "rgba(0,0,0,0.28)",
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    marginHorizontal: 6,
     alignItems: "center",
     width: 100,
   },
   day: {
-    fontWeight: "bold",
+    fontWeight: "700",
     color: "#fff",
-    marginBottom: 5,
-    fontSize: 14,
+    marginBottom: 8,
   },
   temp: {
-    fontSize: 16,
+    marginTop: 8,
     color: "#fff",
-    marginTop: 5,
+    fontWeight: "600",
   },
 });

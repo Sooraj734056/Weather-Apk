@@ -1,45 +1,50 @@
-import { OPENWEATHERMAP_API_KEY } from "@env";
+import axios from "axios";
 
+const API_KEY = process.env.OPENWEATHERMAP_API_KEY;
 const BASE_URL = "https://api.openweathermap.org/data/2.5";
 
-// ✅ Weather Fetch Function
-export const fetchWeather = async (city, lat = null, lon = null) => {
+export const fetchWeather = async (city = null, lat = null, lon = null) => {
   try {
     let url = "";
+    if (city) {
+      url = `${BASE_URL}/weather?q=${city}&units=metric&appid=${API_KEY}`;
+    } else if (lat && lon) {
+      url = `${BASE_URL}/weather?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}`;
+    } else return null;
 
-    if (lat && lon) {
-      // Location-based request
-      url = `${BASE_URL}/weather?lat=${lat}&lon=${lon}&appid=${OPENWEATHERMAP_API_KEY}&units=metric`;
-    } else {
-      // City-based request
-      url = `${BASE_URL}/weather?q=${city}&appid=${OPENWEATHERMAP_API_KEY}&units=metric`;
-    }
-
-    const response = await fetch(url);
-    return await response.json();
-  } catch (error) {
-    console.error("Weather fetch error:", error);
+    const res = await axios.get(url);
+    return res.data;
+  } catch (err) {
+    console.error("fetchWeather error:", err.message);
     return null;
   }
 };
 
-// ✅ Forecast Fetch Function
-export const fetchForecast = async (city, lat = null, lon = null) => {
+export const fetchForecast = async (city = null, lat = null, lon = null) => {
   try {
     let url = "";
+    if (city) {
+      url = `${BASE_URL}/forecast?q=${city}&units=metric&appid=${API_KEY}`;
+    } else if (lat && lon) {
+      url = `${BASE_URL}/forecast?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}`;
+    } else return null;
 
-    if (lat && lon) {
-      // Location-based forecast
-      url = `${BASE_URL}/forecast?lat=${lat}&lon=${lon}&appid=${OPENWEATHERMAP_API_KEY}&units=metric`;
-    } else {
-      // City-based forecast
-      url = `${BASE_URL}/forecast?q=${city}&appid=${OPENWEATHERMAP_API_KEY}&units=metric`;
-    }
+    const res = await axios.get(url);
+    return res.data;
+  } catch (err) {
+    console.error("fetchForecast error:", err.message);
+    return null;
+  }
+};
 
-    const response = await fetch(url);
-    return await response.json();
-  } catch (error) {
-    console.error("Forecast fetch error:", error);
+export const fetchAirQuality = async (lat, lon) => {
+  try {
+    if (!lat || !lon) return null;
+    const url = `${BASE_URL}/air_pollution?lat=${lat}&lon=${lon}&appid=${API_KEY}`;
+    const res = await axios.get(url);
+    return res.data;
+  } catch (err) {
+    console.error("fetchAirQuality error:", err.message);
     return null;
   }
 };

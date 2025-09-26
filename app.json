@@ -4,11 +4,11 @@
     "slug": "Weather",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/Modern 3D.jpeg",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/Modern 3D.jpeg",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -17,7 +17,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/Modern 3D.jpeg",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
@@ -30,6 +30,9 @@
       "eas": {
         "projectId": "96aefb37-d375-4300-a98d-9fcfbaf66f7e"
       }
-    }
+    },
+    "plugins": [
+      "expo-asset"
+    ]
   }
 }
